@@ -144,6 +144,13 @@ struct StreakBarView: View {
                 }
             }
             
+            if let firstDay = streakManager.weekDates().first {
+                let year = Calendar.current.component(.year, from: firstDay.date)
+                Text(String(year))
+                    .font(.headline)
+                    .padding(.bottom, 4)
+            }
+            
             HStack(spacing: 12) {
                 ForEach(streakManager.weekDates()) { day in
                     VStack(spacing: 4) {
@@ -163,7 +170,7 @@ struct StreakBarView: View {
         }
         .padding(.vertical, 8)
         .background(Color(.systemGray6))
-        .edgesIgnoringSafeArea(.top) // go behind status bar if you want
+        .edgesIgnoringSafeArea(.top)
     }
     
     private func circleColor(for status: DayStatus) -> Color {
@@ -194,7 +201,7 @@ struct StreakBar: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            StreakBarView(streakManager: streakManager) // 🔝 pinned at top
+            StreakBarView(streakManager: streakManager) // pinned at top
         }
     }
 }
