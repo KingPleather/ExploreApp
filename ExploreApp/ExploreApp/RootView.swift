@@ -20,13 +20,17 @@ struct RootView: View {
 
             NavigationStack {
                 SummaryView()
-                    .navigationTitle("Home")
+                    .navigationTitle("Summary")
                     .navigationBarTitleDisplayMode(.inline)
             }
             .tabItem {
-                Label("Home", systemImage: "house")
+                Label("Summary", systemImage: "checklist")
             }
             
         }
     }
+}
+
+#Preview {
+    RootView()
 }
