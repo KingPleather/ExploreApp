@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  HomeView.swift
 //  ExploreApp
 //
 //  Created by Jono Tan on 3/1/26.
@@ -7,12 +7,11 @@
 
 import SwiftUI
 
-struct ContentView: View {
+struct HomeView: View {
     var body: some View {
-        RootView()
+        Text("Home").font(.title)
     }
 }
-
 #Preview {
-    ContentView()
+    HomeView()
 }
