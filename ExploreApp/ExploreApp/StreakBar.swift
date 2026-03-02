@@ -10,9 +10,9 @@ import Combine
 // MARK: - Models
 
 enum DayStatus {
-    case alive      // streak kept
-    case missed     // streak was missed
-    case future     // upcoming days
+    case alive
+    case missed
+    case future
 }
 
 struct StreakDay: Identifiable {
@@ -33,18 +33,29 @@ class StreakManager: ObservableObject {
     @Published var lastValidDay: Date?
     @Published var missedDay: Date?
     
-    private var realCurrentWeekStart: Date {
+    private let calendar = Calendar.current
+    
+    // MARK: Testing overrides
+    var testingMode = false
+    var overrideFirstAllowedWeekStart: Date?
+    var overrideRealCurrentWeekStart: Date?
+    
+    private var realCurrentWeekStartInternal: Date {
         calendar.date(
             from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())
         )!
     }
     
-    private let calendar = Calendar.current
+    var realCurrentWeekStart: Date {
+        testingMode ? (overrideRealCurrentWeekStart ?? realCurrentWeekStartInternal)
+                    : realCurrentWeekStartInternal
+    }
+    
     @Published var currentWeekStart: Date = Calendar.current.startOfDay(for: Date())
     
     private let firstUseKey = "firstUseDate"
 
-    private var firstUseDate: Date {
+    private var firstUseDateInternal: Date {
         if let stored = UserDefaults.standard.object(forKey: firstUseKey) as? Date {
             return stored
         } else {
@@ -55,10 +66,15 @@ class StreakManager: ObservableObject {
     }
     
     var firstAllowedWeekStart: Date {
-        calendar.date(
-            from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: firstUseDate)
+        if testingMode, let override = overrideFirstAllowedWeekStart {
+            return override
+        }
+        return calendar.date(
+            from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: firstUseDateInternal)
         )!
     }
+    
+    // MARK: Streak Logic
     
     func logAction(_ action: ExplorationAction, date: Date = Date()) {
         let today = calendar.startOfDay(for: date)
@@ -98,7 +114,9 @@ class StreakManager: ObservableObject {
     }
     
     func weekDates() -> [StreakDay] {
-        guard let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: currentWeekStart)) else {
+        guard let weekStart = calendar.date(
+            from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: currentWeekStart)
+        ) else {
             return []
         }
         
@@ -108,7 +126,7 @@ class StreakManager: ObservableObject {
             
             if let last = lastValidDay {
                 if calendar.isDate(day, inSameDayAs: last) || day < last {
-                    if missedDay != nil && calendar.isDate(day, inSameDayAs: missedDay!) {
+                    if let missed = missedDay, calendar.isDate(day, inSameDayAs: missed) {
                         status = .missed
                     } else {
                         status = .alive
@@ -126,19 +144,15 @@ class StreakManager: ObservableObject {
     
     func previousWeek() {
         let previous = calendar.date(byAdding: .weekOfYear, value: -1, to: currentWeekStart)!
-        
-        // Block going earlier than first app use week
         if previous >= firstAllowedWeekStart {
             currentWeekStart = previous
         }
     }
     
     func nextWeek() {
-        let nextWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: currentWeekStart)!
-        
-        // Block scrolling into future weeks
-        if nextWeek <= realCurrentWeekStart {
-            currentWeekStart = nextWeek
+        let next = calendar.date(byAdding: .weekOfYear, value: 1, to: currentWeekStart)!
+        if next <= realCurrentWeekStart {
+            currentWeekStart = next
         }
     }
 }
@@ -173,12 +187,8 @@ struct StreakBarView: View {
                             : .gray
                         )
                 }
-                .disabled(
-                    streakManager.currentWeekStart <= streakManager.firstAllowedWeekStart
-                )
-                .opacity(
-                    streakManager.currentWeekStart <= streakManager.firstAllowedWeekStart ? 0.4 : 1.0
-                )
+                .disabled(streakManager.currentWeekStart <= streakManager.firstAllowedWeekStart)
+                .opacity(streakManager.currentWeekStart <= streakManager.firstAllowedWeekStart ? 0.4 : 1)
                 
                 Spacer()
                 
@@ -187,18 +197,12 @@ struct StreakBarView: View {
                         .font(.title2)
                         .padding()
                         .foregroundColor(
-                            streakManager.currentWeekStart < Calendar.current.date(
-                                from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())
-                            )!
+                            streakManager.currentWeekStart < streakManager.realCurrentWeekStart
                             ? .blue
                             : .gray
                         )
                 }
-                .disabled(
-                    streakManager.currentWeekStart >= Calendar.current.date(
-                        from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())
-                    )!
-                )
+                .disabled(streakManager.currentWeekStart >= streakManager.realCurrentWeekStart)
             }
             
             if let firstDay = streakManager.weekDates().first {
@@ -212,7 +216,7 @@ struct StreakBarView: View {
                 ForEach(streakManager.weekDates()) { day in
                     VStack(spacing: 4) {
                         Circle()
-                            .fill(circleColor(for: day.status))
+                            .fill(circleColor(for: day.status, day: day))
                             .frame(width: 30, height: 30)
                         
                         Text(dayFormatter.string(from: day.date))
@@ -227,25 +231,24 @@ struct StreakBarView: View {
         }
         .padding(.vertical, 8)
         .background(Color(.systemGray6))
-        .edgesIgnoringSafeArea(.top)
     }
     
-    private func circleColor(for status: DayStatus) -> Color {
+    private func circleColor(for status: DayStatus, day: StreakDay) -> Color {
+        let calendar = Calendar.current
+
+        // RED = the day immediately after the missed day
+        if let missed = streakManager.missedDay,
+           let warningDay = calendar.date(byAdding: .day, value: 1, to: missed),
+           calendar.isDate(day.date, inSameDayAs: warningDay) {
+            return .red
+        }
+
         switch status {
         case .alive:
             return .green
         case .missed:
             return .yellow
         case .future:
-            // Check if the previous day was missed and the user did not explore new tile
-            if let last = streakManager.lastValidDay, let missed = streakManager.missedDay {
-                let calendar = Calendar.current
-                let daysSinceMissed = calendar.dateComponents([.day], from: missed, to: last).day ?? 0
-                if daysSinceMissed == 1 {
-                    // User did not explore new tile after missed day
-                    return .red
-                }
-            }
             return .gray
         }
     }
@@ -257,14 +260,34 @@ struct StreakBar: View {
     @StateObject var streakManager = StreakManager()
     
     var body: some View {
-        VStack(spacing: 0) {
-            StreakBarView(streakManager: streakManager) // pinned at top
-        }
+        StreakBarView(streakManager: streakManager)
     }
 }
 
 // MARK: - Preview
 
 #Preview {
-    StreakBar()
+    UserDefaults.standard.removeObject(forKey: "firstUseDate")
+
+    let manager = StreakManager()
+    let calendar = Calendar.current
+
+    manager.testingMode = true
+
+    let fakeToday = calendar.date(from: DateComponents(year: 2025, month: 1, day: 5))!
+
+    manager.overrideRealCurrentWeekStart = fakeToday
+    manager.overrideFirstAllowedWeekStart = calendar.date(byAdding: .weekOfYear, value: -10, to: fakeToday)!
+
+    manager.currentWeekStart = fakeToday
+
+    let sunday = fakeToday
+    let tuesday = calendar.date(byAdding: .day, value: 2, to: sunday)!
+    let wednesday = calendar.date(byAdding: .day, value: 4, to: sunday)!
+
+    manager.missedDay = tuesday
+    manager.lastValidDay = wednesday
+    manager.currentStreak = 6
+
+    return StreakBar(streakManager: manager)
 }
