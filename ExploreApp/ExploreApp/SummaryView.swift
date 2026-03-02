@@ -8,52 +8,78 @@
 import SwiftUI
 import Charts
 
-//EXPLORATION STATS VIEW
-struct ExplorationStatsView: View {
-    let dailyStats: DailyStats
-    let monthlyStats: MonthlyStats
-    let adventureScore: AdventureScore
+// MARK: - EXPLORATION PROGRESS VIEW
+struct ExplorationProgressView: View {
+    let dailyStats: DailyExplorationStats
+    let streakStats: ExplorationStreakStats
+    let explorationScore: ExplorationScore
     
     var body: some View {
         VStack(spacing: 24) {
-            // Daily Stats
+            
+            // MARK: - Daily Exploration
             VStack(alignment: .leading, spacing: 8) {
-                Text("Daily Stats")
+                Text("Daily Exploration")
                     .font(.headline)
+                
                 HStack {
-                    StatBox(title: "New Places", value: "\(dailyStats.newPlaces)")
-                    StatBox(title: "Farthest Distance", value: String(format: "%.1f km", dailyStats.farthestDistance))
-                    StatBox(title: "Time Outdoors", value: String(format: "%.1f hrs", dailyStats.timeOutdoors))
+                    StatBox(
+                        title: "Steps Today",
+                        value: "\(dailyStats.stepsToday)"
+                    )
+                    StatBox(
+                        title: "Home Bubble",
+                        value: dailyStats.leftHomeBubble ? "Went out!" : "Stayed In"
+                    )
+                    StatBox(
+                        title: "Islands Unlocked",
+                        value: "\(dailyStats.islandsUnlockedToday)"
+                    )
                 }
             }
             
-            // Monthly Stats
+            // MARK: - Streak Progress
             VStack(alignment: .leading, spacing: 8) {
-                Text("Monthly Stats")
+                Text("Exploration Streaks")
                     .font(.headline)
+                
                 HStack {
-                    StatBox(title: "Total New Places", value: "\(monthlyStats.totalNewPlaces)")
-                    StatBox(title: "Longest Streak", value: "\(monthlyStats.longestStreak) days")
-                    StatBox(title: "Current Streak", value: "\(monthlyStats.currentStreak) days")
-                    StatBox(title: "Total Distance", value: "\(monthlyStats.totalDistance) km")
+                    StatBox(
+                        title: "Total Islands",
+                        value: "\(streakStats.islandsUnlockedThisMonth)"
+                    )
+                    StatBox(
+                        title: "Longest Streak",
+                        value: "\(streakStats.longestStreak) days"
+                    )
+                    StatBox(
+                        title: "Current Streak",
+                        value: "\(streakStats.currentStreak) days"
+                    )
+                    StatBox(
+                        title: "Total Steps",
+                        value: "\(streakStats.totalStepsThisMonth)"
+                    )
                 }
             }
             
-            // Adventure Score
+            // MARK: - Exploration Score
             VStack(alignment: .leading, spacing: 8) {
-                Text("Adventure Score")
+                Text("Exploration Score")
                     .font(.headline)
+                
                 HStack {
-                    StatBox(title: "Total Score", value: "\(adventureScore.total)")
-                    StatBox(title: "Distance", value: "\(adventureScore.breakdown.distance)")
-                    StatBox(title: "New Tiles", value: "\(adventureScore.breakdown.newTiles)")
-                    StatBox(title: "Time Outdoors", value: "\(adventureScore.breakdown.timeOutdoors)")
+                    StatBox(title: "Total Score", value: "\(explorationScore.total)")
+                    StatBox(title: "Steps", value: "\(explorationScore.breakdown.steps)")
+                    StatBox(title: "Islands", value: "\(explorationScore.breakdown.islandsUnlocked)")
+                    StatBox(title: "Streak Bonus", value: "\(explorationScore.breakdown.streakBonus)")
                 }
             }
         }
     }
 }
 
+// MARK: - STAT BOX
 struct StatBox: View {
     let title: String
     let value: String
@@ -73,36 +99,37 @@ struct StatBox: View {
     }
 }
 
-//MAIN APP VIEW
+// MARK: - MAIN SUMMARY VIEW
 struct SummaryView: View {
     
-    // MARK: - Mock Data
+    // MARK: - MOCK DATA
     
-    let dailyStats = DailyStats(
-        newPlaces: 7,
-        farthestDistance: 12.5,
-        timeOutdoors: 3.5
+    let dailyStats = DailyExplorationStats(
+        stepsToday: 10432,
+        leftHomeBubble: true,
+        exploredToday: true,
+        islandsUnlockedToday: 1
     )
     
-    let monthlyStats = MonthlyStats(
-        totalNewPlaces: 89,
+    let streakStats = ExplorationStreakStats(
+        islandsUnlockedThisMonth: 18,
         longestStreak: 14,
         currentStreak: 7,
-        totalDistance: 245
+        totalStepsThisMonth: 245_000,
     )
     
-    let adventureScore = AdventureScore(
+    let explorationScore = ExplorationScore(
         total: 542,
-        breakdown: AdventureBreakdown(
-            distance: 245,
-            newTiles: 178,
-            timeOutdoors: 119
+        breakdown: ExplorationScoreBreakdown(
+            steps: 245,
+            islandsUnlocked: 178,
+            streakBonus: 119
         )
     )
     
     let achievements = MockData.achievements
     let weeklyData = MockData.weeklyData
-    let monthlyComparison = MockData.monthlyComparison
+    let monthlyScores = MockData.monthlyScores
     let calendarDays = MockData.calendarDays
     
     var body: some View {
@@ -111,7 +138,7 @@ struct SummaryView: View {
                 
                 // MARK: - Header
                 HStack(spacing: 16) {
-                    Image(systemName: "location.north.fill")
+                    Image(systemName: "globe.americas.fill")
                         .font(.system(size: 28))
                         .foregroundColor(.blue)
                         .padding()
@@ -123,7 +150,7 @@ struct SummaryView: View {
                             .font(.title)
                             .bold()
                         
-                        Text("Track your adventures and discoveries")
+                        Text("Steps, streaks, and floating islands")
                             .foregroundColor(.secondary)
                     }
                     
@@ -131,20 +158,20 @@ struct SummaryView: View {
                 }
                 
                 // MARK: - Main Stats
-                ExplorationStatsView(
+                ExplorationProgressView(
                     dailyStats: dailyStats,
-                    monthlyStats: monthlyStats,
-                    adventureScore: adventureScore
+                    streakStats: streakStats,
+                    explorationScore: explorationScore
                 )
                 
                 // MARK: - Charts
                 ExplorationChartsView(
                     weeklyData: weeklyData,
-                    monthlyComparison: monthlyComparison
+                    monthlyScores: monthlyScores
                 )
                 
-                // MARK: - Heat Map
-                StreakCalendarView(days: calendarDays)
+                // MARK: - Streak Heatmap
+                ExplorationStreakMapView(days: calendarDays)
                 
                 // MARK: - Achievements
                 AchievementsGridView(achievements: achievements)
@@ -154,29 +181,31 @@ struct SummaryView: View {
     }
 }
 
-// DATA MODELS
-struct DailyStats {
-    let newPlaces: Int
-    let farthestDistance: Double
-    let timeOutdoors: Double
+// MARK: - DATA MODELS
+
+struct DailyExplorationStats {
+    let stepsToday: Int
+    let leftHomeBubble: Bool
+    let exploredToday: Bool
+    let islandsUnlockedToday: Int
 }
 
-struct MonthlyStats {
-    let totalNewPlaces: Int
+struct ExplorationStreakStats {
+    let islandsUnlockedThisMonth: Int
     let longestStreak: Int
     let currentStreak: Int
-    let totalDistance: Double
+    let totalStepsThisMonth: Int
 }
 
-struct AdventureScore {
+struct ExplorationScore {
     let total: Int
-    let breakdown: AdventureBreakdown
+    let breakdown: ExplorationScoreBreakdown
 }
 
-struct AdventureBreakdown {
-    let distance: Int
-    let newTiles: Int
-    let timeOutdoors: Int
+struct ExplorationScoreBreakdown {
+    let steps: Int
+    let islandsUnlocked: Int
+    let streakBonus: Int
 }
 
 struct Achievement: Identifiable {
@@ -189,55 +218,52 @@ struct Achievement: Identifiable {
     let target: Int?
 }
 
-struct WeeklyData: Identifiable {
+struct WeeklyExplorationData: Identifiable {
     let id = UUID()
     let day: String
-    let places: Int
-    let distance: Double
+    let steps: Int
+    let explored: Bool
 }
 
-struct MonthlyComparison: Identifiable {
+struct MonthlyExplorationScore: Identifiable {
     let id = UUID()
     let month: String
     let score: Int
 }
 
-struct CalendarDay: Identifiable {
+struct ExplorationStreakDay: Identifiable {
     let id = UUID()
     let date: Date
     let explored: Bool
-    let count: Int
+    let steps: Int
 }
 
-
-//CHARTS COMPONENT
+// MARK: - CHARTS
 struct ExplorationChartsView: View {
-    let weeklyData: [WeeklyData]
-    let monthlyComparison: [MonthlyComparison]
+    let weeklyData: [WeeklyExplorationData]
+    let monthlyScores: [MonthlyExplorationScore]
     
     var body: some View {
         VStack(spacing: 24) {
             
-            // Weekly Chart
             VStack(alignment: .leading) {
-                Text("Weekly Activity")
+                Text("Weekly Steps & Exploration")
                     .font(.headline)
                 
                 Chart(weeklyData) { data in
                     BarMark(
                         x: .value("Day", data.day),
-                        y: .value("Places", data.places)
+                        y: .value("Steps", data.steps)
                     )
                 }
                 .frame(height: 200)
             }
             
-            // Monthly Comparison
             VStack(alignment: .leading) {
-                Text("Monthly Score")
+                Text("Monthly Exploration Score")
                     .font(.headline)
                 
-                Chart(monthlyComparison) { data in
+                Chart(monthlyScores) { data in
                     LineMark(
                         x: .value("Month", data.month),
                         y: .value("Score", data.score)
@@ -249,13 +275,34 @@ struct ExplorationChartsView: View {
     }
 }
 
-// ACHIEVEMENTS GRID
+// MARK: - STREAK MAP
+struct ExplorationStreakMapView: View {
+    let days: [ExplorationStreakDay]
+    
+    let columns = Array(repeating: GridItem(.flexible()), count: 7)
+    
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text("Exploration Streak Map")
+                .font(.headline)
+            
+            LazyVGrid(columns: columns, spacing: 6) {
+                ForEach(days) { day in
+                    Rectangle()
+                        .fill(day.explored ? Color.blue.opacity(min(Double(day.steps) / 20000.0, 1.0)) : Color.gray.opacity(0.2))
+                        .frame(height: 20)
+                        .cornerRadius(4)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - ACHIEVEMENTS
 struct AchievementsGridView: View {
     let achievements: [Achievement]
     
-    let columns = [
-        GridItem(.adaptive(minimum: 140))
-    ]
+    let columns = [GridItem(.adaptive(minimum: 140))]
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -279,8 +326,7 @@ struct AchievementsGridView: View {
                         if !achievement.unlocked,
                            let progress = achievement.progress,
                            let target = achievement.target {
-                            ProgressView(value: Double(progress),
-                                         total: Double(target))
+                            ProgressView(value: Double(progress), total: Double(target))
                         }
                     }
                     .padding()
@@ -294,70 +340,44 @@ struct AchievementsGridView: View {
     }
 }
 
-//Streak Calendar
-struct StreakCalendarView: View {
-    let days: [CalendarDay]
-    
-    let columns = Array(repeating: GridItem(.flexible()), count: 7)
-    
-    var body: some View {
-        VStack(alignment: .leading) {
-            Text("Activity Heatmap")
-                .font(.headline)
-            
-            LazyVGrid(columns: columns, spacing: 6) {
-                ForEach(days) { day in
-                    Rectangle()
-                        .fill(day.explored ? Color.blue.opacity(Double(day.count) / 12.0) : Color.gray.opacity(0.2))
-                        .frame(height: 20)
-                        .cornerRadius(4)
-                }
-            }
-        }
-    }
-}
-
-//Mock Data Helper
+// MARK: - MOCK DATA
 struct MockData {
     
     static let achievements: [Achievement] = [
-        Achievement(id: "1", title: "Explorer", description: "Visit 50 new places", icon: "🗺️", unlocked: true, progress: nil, target: nil),
-        Achievement(id: "2", title: "Marathon", description: "Travel 100km in a month", icon: "🏃", unlocked: true, progress: nil, target: nil),
-        Achievement(id: "3", title: "Early Bird", description: "Explore before 7 AM", icon: "🌅", unlocked: true, progress: nil, target: nil),
-        Achievement(id: "4", title: "Night Owl", description: "Explore after 9 PM", icon: "🦉", unlocked: false, progress: 3, target: 5),
-        Achievement(id: "5", title: "Streak Master", description: "30 day streak", icon: "🔥", unlocked: false, progress: 14, target: 30),
-        Achievement(id: "6", title: "Century", description: "Visit 100 places", icon: "💯", unlocked: false, progress: 89, target: 100),
-        Achievement(id: "7", title: "Adventurer", description: "Reach 1000 score", icon: "⭐", unlocked: false, progress: 542, target: 1000),
-        Achievement(id: "8", title: "Weekend Warrior", description: "Explore every weekend", icon: "🎯", unlocked: false, progress: 2, target: 4),
+        Achievement(id: "1", title: "Island Explorer", description: "Unlock 50 floating islands", icon: "🏝️", unlocked: true, progress: nil, target: nil),
+        Achievement(id: "2", title: "Step Master", description: "Reach 1,000,000 steps", icon: "👟", unlocked: false, progress: 542_000, target: 1_000_000),
+        Achievement(id: "3", title: "Streak Keeper", description: "Maintain a 30-day streak", icon: "🔥", unlocked: false, progress: 14, target: 30),
+        Achievement(id: "4", title: "Streak Saver", description: "Save your streak after missing a day", icon: "❤️‍🔥", unlocked: false, progress: 3, target: 30)
+
     ]
     
-    static let weeklyData: [WeeklyData] = [
-        WeeklyData(day: "Mon", places: 8, distance: 15),
-        WeeklyData(day: "Tue", places: 5, distance: 12),
-        WeeklyData(day: "Wed", places: 12, distance: 22),
-        WeeklyData(day: "Thu", places: 9, distance: 18),
-        WeeklyData(day: "Fri", places: 15, distance: 28),
-        WeeklyData(day: "Sat", places: 18, distance: 35),
-        WeeklyData(day: "Sun", places: 22, distance: 42)
+    static let weeklyData: [WeeklyExplorationData] = [
+        WeeklyExplorationData(day: "Mon", steps: 8200, explored: false),
+        WeeklyExplorationData(day: "Tue", steps: 10200, explored: true),
+        WeeklyExplorationData(day: "Wed", steps: 11500, explored: true),
+        WeeklyExplorationData(day: "Thu", steps: 9800, explored: false),
+        WeeklyExplorationData(day: "Fri", steps: 14300, explored: true),
+        WeeklyExplorationData(day: "Sat", steps: 18000, explored: true),
+        WeeklyExplorationData(day: "Sun", steps: 22000, explored: true)
     ]
     
-    static let monthlyComparison: [MonthlyComparison] = [
-        MonthlyComparison(month: "Oct", score: 385),
-        MonthlyComparison(month: "Nov", score: 425),
-        MonthlyComparison(month: "Dec", score: 398),
-        MonthlyComparison(month: "Jan", score: 478),
-        MonthlyComparison(month: "Feb", score: 512),
-        MonthlyComparison(month: "Mar", score: 542),
+    static let monthlyScores: [MonthlyExplorationScore] = [
+        MonthlyExplorationScore(month: "Oct", score: 385),
+        MonthlyExplorationScore(month: "Nov", score: 425),
+        MonthlyExplorationScore(month: "Dec", score: 398),
+        MonthlyExplorationScore(month: "Jan", score: 478),
+        MonthlyExplorationScore(month: "Feb", score: 512),
+        MonthlyExplorationScore(month: "Mar", score: 542)
     ]
     
-    static let calendarDays: [CalendarDay] = {
+    static let calendarDays: [ExplorationStreakDay] = {
         (0..<35).map { i in
             let date = Calendar.current.date(byAdding: .day, value: -34 + i, to: Date())!
-            let count = Int.random(in: 0...12)
-            return CalendarDay(
+            let steps = Int.random(in: 0...22000)
+            return ExplorationStreakDay(
                 date: date,
-                explored: count > 0,
-                count: count
+                explored: steps >= 10_000,
+                steps: steps
             )
         }
     }()
